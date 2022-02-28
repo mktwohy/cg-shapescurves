@@ -1,3 +1,7 @@
+const red = [255, 0, 0, 255]
+const green = [0, 255, 0, 255]
+const blue = [0, 0, 255, 255]
+
 class Renderer {
     // canvas:              object ({id: __, width: __, height: __})
     // num_curve_sections:  int
@@ -46,12 +50,12 @@ class Renderer {
 
     // ctx:          canvas context
     drawSlide0(ctx) {
-        
+        this.drawRectangle({x: 500, y: 200 }, {x: 670, y: 500}, red, ctx)
     }
 
     // ctx:          canvas context
     drawSlide1(ctx) {
-
+        
     }
 
     // ctx:          canvas context
@@ -69,7 +73,12 @@ class Renderer {
     // color:        array of int [R, G, B, A]
     // ctx:          canvas context
     drawRectangle(left_bottom, right_top, color, ctx) {
-        
+        const left_top      = {x: left_bottom.x, y: right_top.y}
+        const right_bottom  = {x: right_top.x, y: left_bottom.y}
+        this.drawLine(left_bottom, left_top, color, ctx)
+        this.drawLine(left_top, right_top, color, ctx)
+        this.drawLine(right_top, right_bottom, color, ctx)
+        this.drawLine(right_bottom, left_bottom, color, ctx)
     }
 
     // center:       object ({x: __, y: __})
