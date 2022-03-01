@@ -1,6 +1,7 @@
 const red = [255, 0, 0, 255]
 const green = [0, 255, 0, 255]
 const blue = [0, 0, 255, 255]
+const black = [0, 0, 0, 255]
 
 class Renderer {
     // canvas:              object ({id: __, width: __, height: __})
@@ -13,6 +14,8 @@ class Renderer {
         this.slide_idx = 0;
         this.num_curve_sections = num_curve_sections;
         this.show_points = show_points_flag;
+        this.pointWidth = 5
+        this.pointColor = black
     }
 
     // n:  int
@@ -50,22 +53,54 @@ class Renderer {
 
     // ctx:          canvas context
     drawSlide0(ctx) {
-        this.drawRectangle({x: 500, y: 200 }, {x: 670, y: 500}, red, ctx)
+        this.drawRectangle({x: 500, y: 200}, {x: 670, y: 500}, red, ctx)
     }
 
     // ctx:          canvas context
     drawSlide1(ctx) {
-        
+        this.drawCircle({x: 300, y: 250}, 100, red, ctx)
     }
 
     // ctx:          canvas context
     drawSlide2(ctx) {
-
+        this.drawBezierCurve(
+            { x: 100, y: 100 },
+            { x: 150, y: 400 },
+            { x: 500, y: 350 },
+            { x: 450, y: 125 },
+            green,
+            ctx
+        )
     }
 
     // ctx:          canvas context
     drawSlide3(ctx) {
+        
+    }
 
+    // pts:         array of object({x: __, y: __ })
+    drawPoints(pts, ctx){
+        if (this.show_points){
+            pts.forEach( p => {
+                this.drawPoint(this.pointWidth, p, this.pointColor, ctx)
+            })
+        }
+    }
+
+    drawPoint(width, center, color, ctx){
+        const halfWidth = width / 2
+        const points = [
+            { x: center.x - halfWidth, y: center.y - halfWidth },
+            { x: center.x - halfWidth, y: center.y + halfWidth },
+            { x: center.x + halfWidth, y: center.y + halfWidth },
+            { x: center.x + halfWidth, y: center.y - halfWidth },
+        ]
+
+        for(let i = 0; i < points.length; i++){
+            let nextPoint = points[(i + 1) % points.length]
+            this.drawLine(points[i], nextPoint, color, ctx)
+        }
+    
     }
 
     // left_bottom:  object ({x: __, y: __})
@@ -73,12 +108,27 @@ class Renderer {
     // color:        array of int [R, G, B, A]
     // ctx:          canvas context
     drawRectangle(left_bottom, right_top, color, ctx) {
-        const left_top      = {x: left_bottom.x, y: right_top.y}
-        const right_bottom  = {x: right_top.x, y: left_bottom.y}
+        const left_top      = { x: left_bottom.x, y: right_top.y }
+        const right_bottom  = { x: right_top.x, y: left_bottom.y }
+
         this.drawLine(left_bottom, left_top, color, ctx)
         this.drawLine(left_top, right_top, color, ctx)
         this.drawLine(right_top, right_bottom, color, ctx)
         this.drawLine(right_bottom, left_bottom, color, ctx)
+
+        this.drawPoints([left_bottom, left_top, right_top, right_bottom], ctx)
+    }
+
+
+
+    // radius       int
+    // phi          float (radians)
+    // center:      object ({x: __, y: __})
+    #polarToCartesian(radius, phi, center){
+        return {
+            x: center.x + radius * Math.cos(phi), 
+            y: center.y + radius * Math.sin(phi)
+        }
     }
 
     // center:       object ({x: __, y: __})
@@ -86,7 +136,20 @@ class Renderer {
     // color:        array of int [R, G, B, A]
     // ctx:          canvas context
     drawCircle(center, radius, color, ctx) {
-        
+        const points = []
+        const n = this.num_curve_sections
+        let phi = 0         // radians
+        const phi_iter = (Math.PI * 2.0) / n
+
+        for (let i = 0; i < n; i++){
+            const pt0 = this.#polarToCartesian(radius, phi, center)
+            phi += phi_iter
+            const pt1 = this.#polarToCartesian(radius, phi, center)
+            this.drawLine(pt0, pt1, color, ctx)
+            points.push(pt0)
+        }
+
+        this.drawPoints(points, ctx)
     }
 
     // pt0:          object ({x: __, y: __})
@@ -96,7 +159,39 @@ class Renderer {
     // color:        array of int [R, G, B, A]
     // ctx:          canvas context
     drawBezierCurve(pt0, pt1, pt2, pt3, color, ctx) {
-        
+        const n = this.num_curve_sections
+        let t = 0
+        const t_iter = 1/this.num_curve_sections
+
+        for (let i = 0; i < n; i++){
+            const a = {
+                x: this.#bezierParametric(pt0.x, pt1.x, pt2.x, pt3.x, t),
+                y: this.#bezierParametric(pt0.y, pt1.y, pt2.y, pt3.y, t)
+            }
+
+            t += t_iter
+
+            const b = {
+                x: this.#bezierParametric(pt0.x, pt1.x, pt2.x, pt3.x, t),
+                y: this.#bezierParametric(pt0.y, pt1.y, pt2.y, pt3.y, t)
+            }
+            this.drawLine(a, b, color, ctx)
+        }
+
+        this.drawPoints([pt0, pt1, pt2, pt3], ctx)
+    }
+    
+    // _0:           int (x or y value of pt0)
+    // _1:           int (x or y value of pt1)
+    // _2:           int (x or y value of pt2)
+    // _3:           int (x or y value of pt3)
+    #bezierParametric(_0, _1, _2, _3, t){
+        return (
+            (1 - t)**3 * _0 + 
+            3 * (1 - t)**2 * t * _1 + 
+            3 * (1 - t) * t**2 *_2 + 
+            t**3 * _3
+        )
     }
 
     // pt0:          object ({x: __, y: __})
