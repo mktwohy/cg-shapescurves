@@ -79,6 +79,7 @@ class Renderer {
     }
 
     // pts:         array of object({x: __, y: __ })
+    // ctx:          canvas context
     drawPoints(pts, ctx){
         if (this.show_points){
             pts.forEach( p => {
@@ -119,18 +120,6 @@ class Renderer {
         this.drawPoints([left_bottom, left_top, right_top, right_bottom], ctx)
     }
 
-
-
-    // radius       int
-    // phi          float (radians)
-    // center:      object ({x: __, y: __})
-    #polarToCartesian(radius, phi, center){
-        return {
-            x: center.x + radius * Math.cos(phi), 
-            y: center.y + radius * Math.sin(phi)
-        }
-    }
-
     // center:       object ({x: __, y: __})
     // radius:       int
     // color:        array of int [R, G, B, A]
@@ -159,6 +148,7 @@ class Renderer {
     // color:        array of int [R, G, B, A]
     // ctx:          canvas context
     drawBezierCurve(pt0, pt1, pt2, pt3, color, ctx) {
+        const points = [pt0, pt1, pt2, pt3]
         const n = this.num_curve_sections
         let t = 0
         const t_iter = 1/this.num_curve_sections
@@ -168,30 +158,17 @@ class Renderer {
                 x: this.#bezierParametric(pt0.x, pt1.x, pt2.x, pt3.x, t),
                 y: this.#bezierParametric(pt0.y, pt1.y, pt2.y, pt3.y, t)
             }
-
             t += t_iter
-
             const b = {
                 x: this.#bezierParametric(pt0.x, pt1.x, pt2.x, pt3.x, t),
                 y: this.#bezierParametric(pt0.y, pt1.y, pt2.y, pt3.y, t)
             }
             this.drawLine(a, b, color, ctx)
+            
+            if (i != 0 ){ points.push(a) }
         }
 
-        this.drawPoints([pt0, pt1, pt2, pt3], ctx)
-    }
-    
-    // _0:           int (x or y value of pt0)
-    // _1:           int (x or y value of pt1)
-    // _2:           int (x or y value of pt2)
-    // _3:           int (x or y value of pt3)
-    #bezierParametric(_0, _1, _2, _3, t){
-        return (
-            (1 - t)**3 * _0 + 
-            3 * (1 - t)**2 * t * _1 + 
-            3 * (1 - t) * t**2 *_2 + 
-            t**3 * _3
-        )
+        this.drawPoints(points, ctx)
     }
 
     // pt0:          object ({x: __, y: __})
@@ -205,5 +182,28 @@ class Renderer {
         ctx.moveTo(pt0.x, pt0.y);
         ctx.lineTo(pt1.x, pt1.y);
         ctx.stroke();
+    }
+
+    // radius       int
+    // phi          float (radians)
+    // center:      object ({x: __, y: __})
+    #polarToCartesian(radius, phi, center){
+        return {
+            x: center.x + radius * Math.cos(phi), 
+            y: center.y + radius * Math.sin(phi)
+        }
+    }
+    
+    // _0:           int (x or y value of pt0)
+    // _1:           int (x or y value of pt1)
+    // _2:           int (x or y value of pt2)
+    // _3:           int (x or y value of pt3)
+    #bezierParametric(_0, _1, _2, _3, t){
+        return (
+            (1 - t)**3 * _0
+            + 3 * (1 - t)**2 * t * _1
+            + 3 * (1 - t) * t**2 *_2 
+            + t**3 * _3
+        )
     }
 };
