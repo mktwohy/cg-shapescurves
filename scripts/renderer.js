@@ -1,3 +1,4 @@
+
 const red = [255, 0, 0, 255]
 const green = [0, 255, 0, 255]
 const blue = [0, 0, 255, 255]
@@ -14,8 +15,8 @@ class Renderer {
         this.slide_idx = 0;
         this.num_curve_sections = num_curve_sections;
         this.show_points = show_points_flag;
-        this.pointWidth = 5
-        this.pointColor = black
+        this.vertexWidth = 5
+        this.vertexColor = black
     }
 
     // n:  int
@@ -75,33 +76,154 @@ class Renderer {
 
     // ctx:          canvas context
     drawSlide3(ctx) {
+        const letterWidth = 100
+        const letterHeight = 200
+
+        // define the bounding box for the first letter
+        const left_bottom = { x: 100, y: 100 }
+        const right_top = this.#copyPoint(left_bottom, letterWidth, letterHeight)
+
+        // draw letters
+        this.#draw_M(left_bottom, right_top, blue, ctx)
+        this.#moveBoundingBox(left_bottom, right_top, letterWidth, 0)
+
+        this.#draw_i(left_bottom, right_top, blue, ctx)
+        this.#moveBoundingBox(left_bottom, right_top, letterWidth, 0)
+
+        this.#draw_k(left_bottom, right_top, blue, ctx)
+        this.#moveBoundingBox(left_bottom, right_top, letterWidth, 0)
+
+        this.#draw_e(left_bottom, right_top, blue, ctx)
+    }
+
+
+    #moveBoundingBox(left_bottom, right_top, tx, ty){
+        this.#movePoint(left_bottom, tx, ty)
+        this.#movePoint(right_top, tx, ty)
+    }
+
+    #draw_M(left_bottom, right_top, color, ctx){
+        const center = this.#getCenter(left_bottom, right_top)
+        const points = [
+            { x: left_bottom.x, y: left_bottom.y},
+            { x: left_bottom.x, y: right_top.y },
+            { x: center.x, y: center.y},
+            { x: right_top.x, y: right_top.y },
+            { x: right_top.x, y: left_bottom.x }
+        ]
+        this.drawPath(points, color, ctx)
+    }
+
+    #draw_i(left_bottom, right_top, color, ctx){
+        const center = this.#getCenter(left_bottom, right_top)
+        this.drawLine(
+            { x: center.x, y: left_bottom.y }, 
+            { x: center.x, y: center.y },
+            color, ctx
+        )
+        this.drawCircle(
+            this.#getCenter(center, { x: center.x, y: right_top.y }),
+            5, color, ctx
+        )
+    }
+
+    #draw_k(left_bottom, right_top, color, ctx){
+        const center = this.#getCenter(left_bottom, right_top)
         
+        this.drawLine(
+            { x: left_bottom.x, y: left_bottom.y }, 
+            { x: left_bottom.x, y: right_top.y },
+            color, ctx
+        )
+        const intersectHeight = (left_bottom.y + center.y)/2
+        this.drawLine(
+            { x: right_top.x, y: left_bottom.y }, 
+            { x: left_bottom.x, y: intersectHeight },
+            color, ctx
+        )
+        this.drawLine(
+            { x: right_top.x, y: center.y }, 
+            { x: left_bottom.x, y: intersectHeight },
+            color, ctx
+        )
+    }
+
+    #draw_e(left_bottom, right_top, color, ctx){
+        const center = this.#getCenter(left_bottom, right_top)
+        const lineHeight = (left_bottom.y + center.y)/2
+        this.drawLine(
+            { x: left_bottom.x, y: lineHeight }, 
+            { x: right_top.x, y: lineHeight },
+            color, ctx
+        )
+        this.drawBezierCurve(
+            { x: left_bottom.x, y: lineHeight },
+            { x: left_bottom.x, y: center.y },
+            { x: right_top.x, y: center.y },
+            { x: right_top.x, y: lineHeight },
+            color, ctx
+        )
+        this.drawBezierCurve(
+            { x: left_bottom.x, y: lineHeight },
+            { x: left_bottom.x, y: (left_bottom.y + lineHeight)/2 },
+            { x: left_bottom.x, y: left_bottom.y },
+            { x: center.x, y: left_bottom.y},
+            color, ctx 
+        )
+        this.drawBezierCurve(
+            { x: center.x, y: left_bottom.y},
+            { x: right_top.x, y: left_bottom.y },
+            { x: right_top.x, y: left_bottom.y },
+            { x: right_top.x, y: (left_bottom.y + lineHeight)/2},
+            color, ctx 
+        )
+        
+    }
+
+
+
+    #getCenter(left_bottom, right_top){
+        return {
+            x: (left_bottom.x + right_top.x)/2, 
+            y: (left_bottom.y + right_top.y)/2
+        }
+    }
+
+    #movePoint(point, tx, ty){
+        point.x += tx 
+        point.y += ty
+    }
+
+    #copyPoint(point, tx, ty){
+        return { x: point.x + tx, y: point.y + ty }
+    }
+
+    drawPath(points, color, ctx){
+        for(let i = 0; i < points.length - 1; i++){
+            this.drawLine(points[i], points[i+1], color, ctx)
+        }
     }
 
     // pts:         array of object({x: __, y: __ })
     // ctx:          canvas context
-    drawPoints(pts, ctx){
+    drawVertices(pts, ctx){
         if (this.show_points){
             pts.forEach( p => {
-                this.drawPoint(this.pointWidth, p, this.pointColor, ctx)
+                this.drawVertex(p, ctx)
             })
         }
     }
 
-    drawPoint(width, center, color, ctx){
-        const halfWidth = width / 2
+    drawVertex(center, ctx){
+        const halfWidth = this.vertexWidth / 2
         const points = [
             { x: center.x - halfWidth, y: center.y - halfWidth },
             { x: center.x - halfWidth, y: center.y + halfWidth },
             { x: center.x + halfWidth, y: center.y + halfWidth },
             { x: center.x + halfWidth, y: center.y - halfWidth },
+            { x: center.x - halfWidth, y: center.y - halfWidth }
         ]
-
-        for(let i = 0; i < points.length; i++){
-            let nextPoint = points[(i + 1) % points.length]
-            this.drawLine(points[i], nextPoint, color, ctx)
-        }
-    
+        this.drawPath(points, this.vertexColor, ctx)
     }
 
     // left_bottom:  object ({x: __, y: __})
@@ -117,7 +239,7 @@ class Renderer {
         this.drawLine(right_top, right_bottom, color, ctx)
         this.drawLine(right_bottom, left_bottom, color, ctx)
 
-        this.drawPoints([left_bottom, left_top, right_top, right_bottom], ctx)
+        this.drawVertices([left_bottom, left_top, right_top, right_bottom], ctx)
     }
 
     // center:       object ({x: __, y: __})
@@ -138,7 +260,7 @@ class Renderer {
             points.push(pt0)
         }
 
-        this.drawPoints(points, ctx)
+        this.drawVertices(points, ctx)
     }
 
     // pt0:          object ({x: __, y: __})
@@ -168,7 +290,7 @@ class Renderer {
             if (i != 0 ){ points.push(a) }
         }
 
-        this.drawPoints(points, ctx)
+        this.drawVertices(points, ctx)
     }
 
     // pt0:          object ({x: __, y: __})
